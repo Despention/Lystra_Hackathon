@@ -1,0 +1,234 @@
+.upload {
+  padding: 32px;
+  max-width: 800px;
+}
+
+.upload__title {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+/* Tabs */
+.upload__tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.upload__tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-family: inherit;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.upload__tab:hover {
+  background-color: var(--surface-secondary);
+}
+
+.upload__tab--active {
+  background-color: var(--accent-light);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.upload__tab-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px;
+}
+
+/* Dropzone */
+.upload__dropzone {
+  margin-bottom: 20px;
+}
+
+.upload__dropzone-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48px 24px;
+  gap: 8px;
+  cursor: pointer;
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  background-color: var(--surface);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.upload__dropzone-area:hover {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.upload__dropzone-area--dragover {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.upload__dropzone-icon {
+  font-size: 44px;
+  color: var(--text-tertiary);
+}
+
+.upload__dropzone-text {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.upload__dropzone-hint {
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.upload__file-selected {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+}
+
+.upload__file-icon {
+  font-size: 28px;
+  color: var(--accent);
+}
+
+.upload__file-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload__file-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  color: var(--critical);
+  display: flex;
+  align-items: center;
+  padding: 0;
+}
+
+.upload__file-remove:hover {
+  opacity: 0.7;
+}
+
+/* Text input */
+.upload__text-card {
+  margin-bottom: 20px;
+}
+
+.upload__textarea {
+  width: 100%;
+  min-height: 200px;
+  border: none;
+  outline: none;
+  resize: vertical;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-primary);
+  background: transparent;
+  font-family: inherit;
+}
+
+.upload__textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.upload__char-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: right;
+  margin-top: 4px;
+}
+
+/* Mode */
+.upload__section-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.upload__modes {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.upload__mode-card {
+  flex: 1;
+  padding: 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background-color 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-family: inherit;
+}
+
+.upload__mode-card:hover {
+  border-color: var(--text-tertiary);
+}
+
+.upload__mode-card--active {
+  border-color: var(--accent);
+  background-color: var(--accent-light);
+}
+
+.upload__mode-icon {
+  font-size: 22px;
+  color: var(--text-tertiary);
+}
+
+.upload__mode-card--active .upload__mode-icon {
+  color: var(--accent);
+}
+
+.upload__mode-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.upload__mode-card--active .upload__mode-title {
+  color: var(--accent);
+}
+
+.upload__mode-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.upload__submit {
+  margin-top: 8px;
+}
+
+.upload__file-input {
+  display: none;
+}

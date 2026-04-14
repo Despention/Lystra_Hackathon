@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.db
+
+# Uploads
+uploads/
+
+# Models (large binary files)
+models/*.gguf
+
+# Environment
+.env
+
+# Node / React Native
+node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/android/
+mobile/ios/
+
+# IDE
+.vscode/
+.idea/
+
+# Local tooling caches
+.claude/
+.deepeval/
+
+# OS
+.DS_Store
+Thumbs.db

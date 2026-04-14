@@ -1,0 +1,92 @@
+.correction-card {
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 10px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: box-shadow 0.15s;
+}
+
+.correction-card:hover {
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.correction-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.correction-card__index {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.correction-card__section {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.correction-card__diff {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.correction-card__diff-col {
+  padding: 10px;
+  border-radius: 8px;
+  background-color: var(--bg);
+}
+
+.correction-card__diff-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-tertiary);
+  margin-bottom: 6px;
+}
+
+.correction-card__diff-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* Diff word highlights */
+.diff-removed {
+  background-color: var(--critical-light);
+  text-decoration: line-through;
+  color: var(--critical);
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.diff-added {
+  background-color: var(--success-light);
+  color: var(--success);
+  font-weight: 600;
+  border-radius: 2px;
+  padding: 0 2px;
+}
+
+.diff-same {
+  color: var(--text-primary);
+}
+
+.correction-card__reason {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.5;
+}
+
+.correction-card__reason-label {
+  font-weight: 600;
+}

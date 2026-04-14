@@ -1,0 +1,16 @@
+appId: com.lystra.tz-analyzer
+productName: TZ Analyzer
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+win:
+  target: nsis
+  icon: public/icon.png
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerIcon: public/icon.png
+  uninstallerIcon: public/icon.png
+  installerHeaderIcon: public/icon.png

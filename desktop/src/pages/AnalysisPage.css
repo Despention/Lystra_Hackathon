@@ -1,0 +1,89 @@
+.analysis {
+  padding: 32px;
+  max-width: 800px;
+}
+
+.analysis__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.analysis__subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+.analysis__error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background-color: var(--critical-light);
+  margin-top: 12px;
+}
+
+.analysis__error-icon {
+  font-size: 18px;
+  color: var(--critical);
+  flex-shrink: 0;
+}
+
+.analysis__error-text {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--critical);
+}
+
+.analysis__agents {
+  margin-top: 20px;
+}
+
+/* Streaming output */
+.analysis__stream-box {
+  margin-top: 16px;
+  background-color: #1E293B;
+  border-radius: 10px;
+  padding: 12px;
+  max-height: 200px;
+  overflow: hidden;
+}
+
+.analysis__stream-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.analysis__stream-pulse {
+  font-size: 14px;
+  color: #94A3B8;
+}
+
+.analysis__stream-label {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.analysis__stream-scroll {
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.analysis__stream-text {
+  font-size: 12px;
+  color: #E2E8F0;
+  font-family: monospace;
+  line-height: 18px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.analysis__cancel {
+  margin-top: 24px;
+}

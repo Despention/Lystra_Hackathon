@@ -1,0 +1,70 @@
+.agent-card {
+  border-radius: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  transition: box-shadow 0.15s;
+}
+
+.agent-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.agent-card__header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.agent-card__icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: var(--surface-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  color: var(--accent);
+  font-size: 20px;
+}
+
+.agent-card__info {
+  flex: 1;
+}
+
+.agent-card__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agent-card__status {
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.agent-card__indicator {
+  width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.agent-card__pending-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background-color: var(--border);
+}
+
+.agent-card__check-icon {
+  color: var(--success);
+  font-size: 22px;
+}
+
+.agent-card__fail-icon {
+  color: var(--critical);
+  font-size: 22px;
+}

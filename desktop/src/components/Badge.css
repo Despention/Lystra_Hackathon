@@ -1,0 +1,40 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.badge--critical {
+  background-color: var(--critical-light);
+  color: #EF4444;
+}
+
+.badge--serious {
+  background-color: var(--serious-light);
+  color: #F97316;
+}
+
+.badge--warning {
+  background-color: var(--warning-light);
+  color: #F59E0B;
+}
+
+.badge--advice {
+  background-color: var(--advice-light);
+  color: #6B7280;
+}
+
+.badge__icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.badge__text {
+  white-space: nowrap;
+}

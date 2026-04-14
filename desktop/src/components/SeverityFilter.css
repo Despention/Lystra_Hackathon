@@ -1,0 +1,40 @@
+.severity-filter {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.severity-filter__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background-color: var(--surface);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: background-color 0.15s, border-color 0.15s;
+  font-family: inherit;
+  outline: none;
+}
+
+.severity-filter__pill:hover {
+  background-color: var(--surface-secondary);
+}
+
+.severity-filter__pill:focus-visible {
+  box-shadow: 0 0 0 2px var(--accent-light);
+}
+
+.severity-filter__pill--active {
+  font-weight: 600;
+}
+
+.severity-filter__pill-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 13px;
+}

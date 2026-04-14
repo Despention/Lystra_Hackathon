@@ -1,0 +1,131 @@
+.issue-detail {
+  padding: 32px;
+  max-width: 800px;
+}
+
+.issue-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.issue-detail__agent-tag {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-size: 13px;
+}
+
+.issue-detail__agent-icon {
+  font-size: 14px;
+}
+
+.issue-detail__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.issue-detail__description {
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+}
+
+/* Quote card */
+.issue-detail__quote-card {
+  margin-bottom: 12px;
+  background-color: var(--surface-secondary) !important;
+}
+
+.issue-detail__card-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.issue-detail__card-icon {
+  font-size: 14px;
+}
+
+.issue-detail__card-label {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.issue-detail__quote-text {
+  font-size: 14px;
+  font-style: italic;
+  line-height: 20px;
+  font-family: monospace;
+  color: var(--text-primary);
+}
+
+/* Reference card */
+.issue-detail__ref-card {
+  margin-bottom: 12px;
+  background-color: var(--accent-light) !important;
+}
+
+.issue-detail__ref-text {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+/* Recommendation card */
+.issue-detail__rec-card {
+  margin-bottom: 12px;
+  background-color: var(--success-light) !important;
+}
+
+.issue-detail__rec-text {
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--text-primary);
+}
+
+/* Penalty */
+.issue-detail__penalty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 10px;
+  background-color: var(--critical-light);
+}
+
+.issue-detail__penalty-icon {
+  font-size: 16px;
+  color: var(--critical);
+}
+
+.issue-detail__penalty-text {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--critical);
+}
+
+/* Back button */
+.issue-detail__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--accent);
+  font-family: inherit;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.issue-detail__back:hover {
+  text-decoration: underline;
+}

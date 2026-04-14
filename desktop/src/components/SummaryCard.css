@@ -1,0 +1,52 @@
+.summary-card {
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  background-color: var(--surface);
+}
+
+.summary-card__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.summary-card__header:hover {
+  opacity: 0.8;
+}
+
+.summary-card__icon {
+  font-size: 20px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+.summary-card__title {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  text-align: left;
+}
+
+.summary-card__chevron {
+  font-size: 16px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+}
+
+.summary-card__text {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
