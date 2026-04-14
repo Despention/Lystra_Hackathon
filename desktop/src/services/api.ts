@@ -141,10 +141,11 @@ export async function downloadHistoryXlsx(folderId?: string): Promise<void> {
   URL.revokeObjectURL(url);
 }
 
-export async function downloadExpertEvalXlsx(expertName?: string, expertComment?: string): Promise<void> {
+export async function downloadExpertEvalXlsx(expertName?: string, expertComment?: string, expertScore?: number): Promise<void> {
   const params: Record<string, string> = {};
   if (expertName?.trim()) params.expert_name = expertName.trim();
   if (expertComment?.trim()) params.expert_comment = expertComment.trim();
+  if (expertScore != null && !isNaN(expertScore)) params.expert_score = String(expertScore);
   const response = await api.get('/api/export/expert-evaluation/xlsx', { params, responseType: 'blob' });
   const url = URL.createObjectURL(response.data);
   const a = document.createElement('a');

@@ -21,6 +21,7 @@ import {
   IoBulb,
   IoAlertCircle,
   IoSpeedometer,
+  IoFlashOutline,
 } from 'react-icons/io5';
 import { useTheme, useTranslation } from '../contexts/ThemeContext';
 import { useAnalysisResult } from '../hooks/useAnalysis';
@@ -75,6 +76,8 @@ export default function ResultPage() {
   const [genLoading, setGenLoading] = useState(false);
   const [expertName, setExpertName] = useState('');
   const [expertComment, setExpertComment] = useState('');
+  const [expertScore, setExpertScore] = useState<string>('');
+  const [autoFilled, setAutoFilled] = useState(false);
 
   if (isLoading || !result) {
     return (
@@ -137,6 +140,40 @@ export default function ResultPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleAutoFill = () => {
+    const s = result.total_score ?? 0;
+    const critical = severityCounts.critical;
+    const serious  = severityCounts.serious;
+    const total    = result.issues.length;
+
+    // Score: scale AI 0-100 → expert 0-100 (round to nearest 5)
+    const rounded = Math.round(s / 5) * 5;
+    setExpertScore(String(rounded));
+
+    // Comment: built from analysis data
+    let verdict = '';
+    if (s >= 80) verdict = 'Документ соответствует требованиям стандартов и рекомендован к принятию.';
+    else if (s >= 60) verdict = 'Документ в целом соответствует требованиям, однако требует доработки по выявленным замечаниям.';
+    else if (s >= 40) verdict = 'Документ имеет существенные недостатки и требует значительной доработки перед принятием.';
+    else verdict = 'Документ не соответствует требованиям стандартов и направляется на кардинальную переработку.';
+
+    const parts: string[] = [];
+    parts.push(`AI-анализ: ${s.toFixed(1)}/100.`);
+    if (total > 0) {
+      parts.push(`Выявлено замечаний: ${total}${critical > 0 ? `, из них критических: ${critical}` : ''}${serious > 0 ? `, серьёзных: ${serious}` : ''}.`);
+    } else {
+      parts.push('Замечаний не выявлено.');
+    }
+    if (result.corrections && result.corrections.length > 0) {
+      parts.push(`Предложено исправлений: ${result.corrections.length}.`);
+    }
+    parts.push(verdict);
+
+    setExpertComment(parts.join(' '));
+    setAutoFilled(true);
+    setTimeout(() => setAutoFilled(false), 2500);
   };
 
   const handleGenerateStructure = async () => {
@@ -226,6 +263,14 @@ export default function ResultPage() {
           </button>
 
           {/* Expert inputs */}
+          <button
+            className={`result__autofill-btn${autoFilled ? ' result__autofill-btn--done' : ''}`}
+            onClick={handleAutoFill}
+            title={t('autoFillTooltip')}
+          >
+            <IoFlashOutline />
+            {autoFilled ? '✓' : t('autoFillBtn')}
+          </button>
           <input
             className="result__expert-input"
             type="text"
@@ -242,10 +287,19 @@ export default function ResultPage() {
             onChange={(e) => setExpertComment(e.target.value)}
             maxLength={300}
           />
+          <input
+            className="result__expert-input result__expert-input--score"
+            type="number"
+            placeholder={t('expertScorePlaceholder')}
+            value={expertScore}
+            onChange={(e) => setExpertScore(e.target.value)}
+            min={0}
+            max={100}
+          />
 
           <button
             className="result__action-btn result__action-btn--expert"
-            onClick={() => downloadExpertEvalXlsx(expertName, expertComment)}
+            onClick={() => downloadExpertEvalXlsx(expertName, expertComment, expertScore !== '' ? Number(expertScore) : undefined)}
           >
             <IoGrid /> {t('expertEvaluation')}
           </button>

@@ -6,21 +6,24 @@ import {
   IoDocumentOutline,
 } from 'react-icons/io5';
 import { useTranslation } from '../contexts/ThemeContext';
+import { useSettingsStore } from '../store/settingsStore';
 import { useHistory } from '../hooks/useAnalysis';
 import './HomePage.css';
-
-function getStatusInfo(status: string): { label: string; cls: string } {
-  if (status === 'completed') return { label: 'ЗАВЕРШЕНО', cls: 'cyan' };
-  if (status === 'pending' || status === 'processing') return { label: 'ОБРАБОТКА', cls: 'primary' };
-  return { label: 'АРХИВ', cls: 'gray' };
-}
 
 export default function HomePage() {
   const navigate = useNavigate();
   const t = useTranslation();
+  const lang = useSettingsStore((s) => s.language);
   const { data: history } = useHistory();
 
   const recentItems = history?.slice(0, 3) ?? [];
+  const dateLocale = lang === 'en' ? 'en-US' : 'ru-RU';
+
+  function getStatusInfo(status: string): { label: string; cls: string } {
+    if (status === 'completed') return { label: t('statusCompleted'), cls: 'cyan' };
+    if (status === 'pending' || status === 'processing') return { label: t('statusProcessing'), cls: 'primary' };
+    return { label: t('statusArchive'), cls: 'gray' };
+  }
 
   return (
     <div className="home">
@@ -30,16 +33,15 @@ export default function HomePage() {
         <div className="home__welcome-body">
           <div className="home__status-row">
             <span className="home__status-dot" />
-            <span className="home__status-text">Система: Оптимально · ГОСТ 34.602-89 · ISO 29148</span>
+            <span className="home__status-text">
+              {t('systemStatus')} · ГОСТ 34.602-89 · ISO 29148 · СТ РК 34.017
+            </span>
           </div>
           <h1 className="home__welcome-title">
-            Добро пожаловать,{' '}
-            <span className="home__welcome-accent">Аналитик</span>.
+            {t('welcomeTitle')}{' '}
+            <span className="home__welcome-accent">{t('welcomeAccent')}</span>.
           </h1>
-          <p className="home__welcome-desc">
-            AI-движок синхронизирован. Аналитическая среда подготовлена для высокоточного
-            синтеза данных. Изучите последние результаты или начните новый анализ.
-          </p>
+          <p className="home__welcome-desc">{t('welcomeDesc')}</p>
         </div>
       </header>
 
@@ -50,8 +52,8 @@ export default function HomePage() {
             <div className="home__new-icon">
               <IoAddCircle size={52} />
             </div>
-            <h2 className="home__new-title">Новый анализ</h2>
-            <p className="home__new-desc">Инициировать AI-обработку технического задания</p>
+            <h2 className="home__new-title">{t('newAnalysis')}</h2>
+            <p className="home__new-desc">{t('newAnalysisDesc')}</p>
           </div>
         </button>
         <div className="home__new-deco home__new-deco--tr" />
@@ -63,10 +65,10 @@ export default function HomePage() {
         <div className="home__recent-hdr">
           <div className="home__recent-hdr-left">
             <IoTimeOutline size={18} className="home__recent-hdr-icon" />
-            <h3 className="home__recent-hdr-title">Последние анализы</h3>
+            <h3 className="home__recent-hdr-title">{t('recentAnalyses')}</h3>
           </div>
           <button className="home__recent-all" onClick={() => navigate('/history')}>
-            Вся история <IoArrowForward size={13} />
+            {t('viewAllHistory')} <IoArrowForward size={13} />
           </button>
         </div>
 
@@ -74,7 +76,7 @@ export default function HomePage() {
           <div className="home__hist-grid">
             {recentItems.map((item) => {
               const { label, cls } = getStatusInfo(item.status);
-              const projectName = (item.filename || 'Текстовый ввод')
+              const projectName = (item.filename || t('textInput'))
                 .replace(/\.[^.]+$/, '')
                 .slice(0, 18)
                 .toUpperCase();
@@ -97,7 +99,7 @@ export default function HomePage() {
                   <div className="home__hist-date">
                     <IoDocumentOutline size={11} />
                     <span>
-                      {new Date(item.created_at).toLocaleDateString('ru-RU', {
+                      {new Date(item.created_at).toLocaleDateString(dateLocale, {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
@@ -130,7 +132,7 @@ export default function HomePage() {
         ) : (
           <div className="home__hist-empty">
             <IoDocumentOutline size={32} />
-            <p>Анализов ещё нет. Начните новый анализ.</p>
+            <p>{t('noAnalysesYet')}</p>
           </div>
         )}
       </section>

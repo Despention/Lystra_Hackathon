@@ -439,7 +439,7 @@ export default function SettingsPage() {
         </div>
         <div className="settings__row">
           <span className="settings__row-label">{'\u0421\u0442\u0430\u043D\u0434\u0430\u0440\u0442\u044B'}</span>
-          <span className="settings__row-value">{'\u0413\u041E\u0421\u0422 34.602, ISO 29148'}</span>
+          <span className="settings__row-value">{'ГОСТ 34.602, ISO 29148, СТ РК 34.017'}</span>
         </div>
         <div className="settings__row" style={{ borderBottom: 'none' }}>
           <span className="settings__row-label">AI {'\u0434\u0432\u0438\u0436\u043E\u043A'}</span>

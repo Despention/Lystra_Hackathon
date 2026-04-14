@@ -210,6 +210,34 @@
 }
 
 /* Expert inputs — sit between XLSX and Expert Rating buttons */
+.result__autofill-btn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--cyan);
+  background: transparent;
+  color: var(--cyan);
+  font-size: 12px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.result__autofill-btn:hover {
+  background: rgba(0, 218, 243, 0.12);
+  box-shadow: 0 0 8px rgba(0, 218, 243, 0.25);
+}
+
+.result__autofill-btn--done {
+  border-color: var(--success);
+  color: var(--success);
+}
+
 .result__expert-input {
   height: 34px;
   padding: 0 10px;
@@ -227,6 +255,16 @@
 
 .result__expert-input--wide {
   width: 200px;
+}
+
+.result__expert-input--score {
+  width: 90px;
+  text-align: center;
+}
+
+.result__expert-input--score::-webkit-inner-spin-button,
+.result__expert-input--score::-webkit-outer-spin-button {
+  opacity: 0.4;
 }
 
 .result__expert-input::placeholder {

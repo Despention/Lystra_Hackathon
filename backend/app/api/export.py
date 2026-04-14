@@ -110,6 +110,7 @@ AGENT_LABELS = {
 async def export_expert_evaluation_xlsx(
     expert_name: str | None = Query(None, description="Имя эксперта — проставляется в колонку 'Эксперт'"),
     expert_comment: str | None = Query(None, description="Комментарий эксперта — проставляется во все строки"),
+    expert_score: int | None = Query(None, ge=0, le=100, description="Итоговая оценка эксперта (0–100) — перезаписывает формулу в колонке 'Итоговый балл'"),
 ):
     """Export expert evaluation template pre-filled with AI scores for all completed analyses."""
     async with async_session() as db:
@@ -199,17 +200,20 @@ async def export_expert_evaluation_xlsx(
             cell.border = thin_border
             cell.alignment = center_align
 
-        # Итоговый балл: SUM of criteria cols
+        # Итоговый балл: expert_score if provided, otherwise SUM formula
         score_col_start = get_column_letter(5)
         score_col_end = get_column_letter(5 + len(CRITERIA) - 1)
+        total_value = expert_score if expert_score is not None else f"=SUM({score_col_start}{row_num}:{score_col_end}{row_num})"
         total_cell = ws.cell(
             row=row_num,
             column=5 + len(CRITERIA),
-            value=f"=SUM({score_col_start}{row_num}:{score_col_end}{row_num})",
+            value=total_value,
         )
         total_cell.font = Font(bold=True)
         total_cell.border = thin_border
         total_cell.alignment = center_align
+        if expert_score is not None:
+            total_cell.fill = PatternFill("solid", fgColor="FFF9C4")  # light yellow = manually set
 
         # Comment column — pre-fill if expert_comment was provided
         comment_cell = ws.cell(row=row_num, column=5 + len(CRITERIA) + 1, value=expert_comment or "")

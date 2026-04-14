@@ -427,7 +427,7 @@ export default function SettingsScreen() {
           </View>
           <View style={s.row}>
             <Text style={s.rowLabel}>Стандарты</Text>
-            <Text style={s.rowValue}>ГОСТ 34.602, ISO 29148</Text>
+            <Text style={s.rowValue}>ГОСТ 34.602, ISO 29148, СТ РК 34.017</Text>
           </View>
           <View style={[s.row, { borderBottomWidth: 0 }]}>
             <Text style={s.rowLabel}>AI движок</Text>

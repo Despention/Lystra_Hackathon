@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { IoSearch, IoCloseCircle, IoTime, IoTrash, IoDownload, IoFolder, IoWarning, IoGrid } from 'react-icons/io5';
 import { useTheme, useTranslation } from '../contexts/ThemeContext';
+import { useSettingsStore } from '../store/settingsStore';
 import { useHistory } from '../hooks/useAnalysis';
 import { deleteAnalysis, moveAnalysisToFolder, downloadHistoryXlsx, downloadExpertEvalXlsx } from '../services/api';
 import { useFolderStore } from '../store/folderStore';
@@ -14,6 +15,8 @@ export default function HistoryPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const t = useTranslation();
+  const lang = useSettingsStore((s) => s.language);
+  const dateLocale = lang === 'en' ? 'en-US' : 'ru-RU';
   const { data: history, refetch } = useHistory();
   const [searchText, setSearchText] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -163,10 +166,10 @@ export default function HistoryPage() {
             <button
               className="history__xlsx-btn history__xlsx-btn--expert"
               onClick={() => downloadExpertEvalXlsx()}
-              title="Скачать шаблон экспертной оценки для жюри (с автозаполненными баллами)"
+              title={t('expertEvalTooltip')}
             >
               <IoGrid />
-              Экспертная оценка
+              {t('expertEvaluation')}
             </button>
           </div>
 
@@ -175,10 +178,10 @@ export default function HistoryPage() {
               <thead>
                 <tr>
                   <th>{t('file')}</th>
-                  <th>Date</th>
-                  <th>Mode</th>
+                  <th>{t('colDate')}</th>
+                  <th>{t('colMode')}</th>
                   <th>{t('remarks')}</th>
-                  <th>Score</th>
+                  <th>{t('colScore')}</th>
                   <th></th>
                   <th></th>
                 </tr>
@@ -201,7 +204,7 @@ export default function HistoryPage() {
                           {item.filename || t('textInput')}
                         </span>
                       </td>
-                      <td>{new Date(item.created_at).toLocaleString('ru-RU')}</td>
+                      <td>{new Date(item.created_at).toLocaleString(dateLocale)}</td>
                       <td>
                         <span className="history__mode">
                           {item.mode === 'full' ? t('fullMode') : t('quickMode')}
