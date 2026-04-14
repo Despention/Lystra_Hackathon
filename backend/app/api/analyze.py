@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from sqlalchemy import select
 
-from app.agents.orchestrator import run_analysis, run_correction_agent
+from app.agents.orchestrator import run_analysis, run_correction_agent, run_improved_tz_agent
 from app.api.websocket import manager
 from app.config import settings
 from app.database import AgentResult as AgentResultModel
@@ -33,6 +33,11 @@ def get_llm_clients():
     if settings.use_mock_llm:
         mock = MockLLMClient()
         return mock, mock
+    # Cloud LLM takes priority over local llama.cpp
+    if settings.use_cloud_llm and settings.cloud_provider != "none" and settings.cloud_api_key:
+        from app.services.cloud_llm_client import CloudLLMClient
+        cloud = CloudLLMClient()
+        return cloud, cloud
     large = LLMClient(settings.llama_cpp_base_url, settings.llama_cpp_model_large)
     # Малая модель идёт на отдельный порт если задан, иначе на тот же сервер
     small_url = settings.llama_cpp_base_url_small or settings.llama_cpp_base_url
@@ -143,6 +148,15 @@ async def _run_analysis_task(analysis_id: str, document, mode: str):
                     severity=c.get("severity", "advice"),
                 )
                 db.add(db_corr)
+
+            # Generate improved TZ version
+            try:
+                improved = await run_improved_tz_agent(document, corrections, llm_large)
+                if improved:
+                    analysis.improved_text = improved[:50000]
+                    await db.commit()
+            except Exception as e:
+                logger.warning("Improved TZ generation failed: %s", e)
 
             # Mark as completed (with warning if some agents failed)
             analysis.status = "completed"

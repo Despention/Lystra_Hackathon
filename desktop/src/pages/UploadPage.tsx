@@ -1,19 +1,17 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  IoDocumentOutline,
-  IoCreateOutline,
   IoCloudUpload,
   IoDocumentText,
   IoCloseCircle,
+  IoArrowForward,
+  IoGridOutline,
   IoFlash,
-  IoSpeedometer,
 } from 'react-icons/io5';
 import { useTranslation } from '../contexts/ThemeContext';
 import { analyzeDocument } from '../services/api';
 import { useAnalysisStore } from '../store/analysisStore';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import Spinner from '../components/Spinner';
 import './UploadPage.css';
 
 export default function UploadPage() {
@@ -32,9 +30,7 @@ export default function UploadPage() {
   const canSubmit = tab === 'file' ? !!file : text.trim().length > 50;
 
   const handleFilePick = useCallback((files: FileList | null) => {
-    if (files && files[0]) {
-      setFile(files[0]);
-    }
+    if (files && files[0]) setFile(files[0]);
   }, []);
 
   const handleDrop = useCallback(
@@ -51,9 +47,7 @@ export default function UploadPage() {
     setDragOver(true);
   }, []);
 
-  const handleDragLeave = useCallback(() => {
-    setDragOver(false);
-  }, []);
+  const handleDragLeave = useCallback(() => setDragOver(false), []);
 
   async function handleSubmit() {
     setLoading(true);
@@ -74,50 +68,68 @@ export default function UploadPage() {
 
   return (
     <div className="upload">
-      <h1 className="upload__title">{t('newAnalysis')}</h1>
-
-      {/* Tabs */}
-      <div className="upload__tabs">
-        <button
-          className={`upload__tab ${tab === 'file' ? 'upload__tab--active' : ''}`}
-          onClick={() => setTab('file')}
-        >
-          <span className="upload__tab-icon"><IoDocumentOutline /></span>
-          {t('file')}
-        </button>
-        <button
-          className={`upload__tab ${tab === 'text' ? 'upload__tab--active' : ''}`}
-          onClick={() => setTab('text')}
-        >
-          <span className="upload__tab-icon"><IoCreateOutline /></span>
-          {t('text')}
-        </button>
+      {/* Page Header */}
+      <div className="upload__page-header">
+        <div>
+          <h1 className="upload__page-title">Новый анализ</h1>
+          <p className="upload__page-sub">Инициализируйте новый процесс синтетического наблюдения</p>
+        </div>
+        <div className="upload__tab-seg">
+          <button
+            className={`upload__seg-btn ${tab === 'file' ? 'upload__seg-btn--active' : ''}`}
+            onClick={() => setTab('file')}
+          >
+            Файл
+          </button>
+          <button
+            className={`upload__seg-btn ${tab === 'text' ? 'upload__seg-btn--active' : ''}`}
+            onClick={() => setTab('text')}
+          >
+            Текст
+          </button>
+        </div>
       </div>
 
-      {/* File upload with drag & drop */}
+      {/* File Upload Zone */}
       {tab === 'file' && (
-        <Card className="upload__dropzone">
-          {file ? (
-            <div className="upload__file-selected">
-              <IoDocumentText className="upload__file-icon" />
-              <span className="upload__file-name">{file.name}</span>
-              <button className="upload__file-remove" onClick={() => setFile(null)}>
-                <IoCloseCircle />
-              </button>
-            </div>
-          ) : (
-            <div
-              className={`upload__dropzone-area ${dragOver ? 'upload__dropzone-area--dragover' : ''}`}
-              onClick={() => fileInputRef.current?.click()}
-              onDrop={handleDrop}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-            >
-              <IoCloudUpload className="upload__dropzone-icon" />
-              <p className="upload__dropzone-text">{t('pickFile')}</p>
-              <p className="upload__dropzone-hint">{t('pickFileHint')}</p>
-            </div>
-          )}
+        <div className="upload__zone-wrap">
+          <div className="upload__zone-glow upload__zone-glow--primary" />
+          <div className="upload__zone-glow upload__zone-glow--cyan" />
+          <div
+            className={`upload__zone ${dragOver ? 'upload__zone--dragover' : ''}`}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+          >
+            {file ? (
+              <div className="upload__file-selected">
+                <IoDocumentText className="upload__file-icon" size={42} />
+                <p className="upload__file-name">{file.name}</p>
+                <button
+                  className="upload__file-remove"
+                  onClick={() => setFile(null)}
+                >
+                  <IoCloseCircle size={22} />
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="upload__zone-icon-wrap">
+                  <IoCloudUpload size={44} />
+                </div>
+                <h3 className="upload__zone-title">Drag & drop или выберите файл</h3>
+                <p className="upload__zone-hint">
+                  Поддерживаемые форматы: PDF, DOCX, TXT (макс. 50МБ)
+                </p>
+                <button
+                  className="upload__zone-btn"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Выбрать на компьютере
+                </button>
+              </>
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -125,12 +137,12 @@ export default function UploadPage() {
             accept=".pdf,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
             onChange={(e) => handleFilePick(e.target.files)}
           />
-        </Card>
+        </div>
       )}
 
-      {/* Text input */}
+      {/* Text Zone */}
       {tab === 'text' && (
-        <Card className="upload__text-card">
+        <div className="upload__text-zone">
           <textarea
             className="upload__textarea"
             placeholder={t('textPlaceholder')}
@@ -138,39 +150,82 @@ export default function UploadPage() {
             onChange={(e) => setText(e.target.value)}
           />
           <p className="upload__char-count">
-            {text.length} {t('chars')} {text.length < 50 && t('minChars')}
+            {text.length} символов{text.length < 50 ? ' · минимум 50' : ''}
           </p>
-        </Card>
+        </div>
       )}
 
-      {/* Mode selector */}
-      <h3 className="upload__section-title">{t('analysisMode')}</h3>
-      <div className="upload__modes">
-        <button
-          className={`upload__mode-card ${mode === 'full' ? 'upload__mode-card--active' : ''}`}
-          onClick={() => setMode('full')}
-        >
-          <IoFlash className="upload__mode-icon" />
-          <span className="upload__mode-title">{t('fullMode')}</span>
-          <span className="upload__mode-desc">{t('fullModeDesc')}</span>
-        </button>
-        <button
-          className={`upload__mode-card ${mode === 'quick' ? 'upload__mode-card--active' : ''}`}
-          onClick={() => setMode('quick')}
-        >
-          <IoSpeedometer className="upload__mode-icon" />
-          <span className="upload__mode-title">{t('quickMode')}</span>
-          <span className="upload__mode-desc">{t('quickModeDesc')}</span>
-        </button>
+      {/* Mode Selection */}
+      <div className="upload__modes-section">
+        <div className="upload__section-label">
+          <span className="upload__section-bar" />
+          <span>Режим анализа</span>
+        </div>
+        <div className="upload__modes">
+          {/* Full Mode */}
+          <button
+            className={`upload__mode-card ${mode === 'full' ? 'upload__mode-card--active' : ''}`}
+            onClick={() => setMode('full')}
+          >
+            <div className="upload__mode-top">
+              <div className={`upload__mode-icon-wrap ${mode === 'full' ? 'upload__mode-icon-wrap--active' : ''}`}>
+                <IoGridOutline size={20} />
+              </div>
+              <div className={`upload__mode-radio ${mode === 'full' ? 'upload__mode-radio--active' : ''}`}>
+                {mode === 'full' && <div className="upload__mode-radio-dot" />}
+              </div>
+            </div>
+            <h4 className="upload__mode-title">Полный</h4>
+            <p className="upload__mode-desc">
+              5 агентов ≈ 60 секунд. Глубокое сканирование всех взаимосвязей и скрытых паттернов.
+            </p>
+            <span className="upload__mode-badge">High Precision</span>
+          </button>
+
+          {/* Quick Mode */}
+          <button
+            className={`upload__mode-card ${mode === 'quick' ? 'upload__mode-card--active' : ''}`}
+            onClick={() => setMode('quick')}
+          >
+            <div className="upload__mode-top">
+              <div className={`upload__mode-icon-wrap ${mode === 'quick' ? 'upload__mode-icon-wrap--active' : ''}`}>
+                <IoFlash size={20} />
+              </div>
+              <div className={`upload__mode-radio ${mode === 'quick' ? 'upload__mode-radio--active' : ''}`}>
+                {mode === 'quick' && <div className="upload__mode-radio-dot" />}
+              </div>
+            </div>
+            <h4 className="upload__mode-title">Быстрый</h4>
+            <p className="upload__mode-desc">
+              Два агента — 20 секунд. Поверхностный анализ основных метрик и быстрых инсайтов.
+            </p>
+            <span className="upload__mode-badge upload__mode-badge--gray">Speed Priority</span>
+          </button>
+        </div>
       </div>
 
-      <Button
-        title={t('startAnalysis')}
-        onClick={handleSubmit}
-        disabled={!canSubmit}
-        loading={loading}
-        className="upload__submit"
-      />
+      {/* Start Button */}
+      <div className="upload__submit-area">
+        <button
+          className="upload__submit-btn"
+          onClick={handleSubmit}
+          disabled={!canSubmit || loading}
+        >
+          <div className="upload__submit-gradient" />
+          <div className="upload__submit-overlay" />
+          <span className="upload__submit-content">
+            {loading ? (
+              <Spinner size="small" color="#00315b" />
+            ) : (
+              <>
+                Начать анализ
+                <IoArrowForward size={20} />
+              </>
+            )}
+          </span>
+        </button>
+        <p className="upload__submit-note">Протокол ALPHA-9 запущен</p>
+      </div>
     </div>
   );
 }

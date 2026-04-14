@@ -48,6 +48,7 @@ class Analysis(Base):
     mode = Column(String, default="full")  # quick/full
     not_ready = Column(String, nullable=True)  # null or reason
     summary = Column(Text, nullable=True)
+    improved_text = Column(Text, nullable=True)
     folder_id = Column(String, ForeignKey("folders.id"), nullable=True)
 
     agent_results = relationship("AgentResult", back_populates="analysis", cascade="all, delete-orphan")

@@ -50,6 +50,7 @@ export interface AnalysisResult {
   agent_results: AgentResultData[];
   issues: Issue[];
   summary: string | null;
+  improved_text: string | null;
   corrections: Correction[];
   folder_id: string | null;
 }

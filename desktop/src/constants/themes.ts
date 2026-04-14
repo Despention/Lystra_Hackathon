@@ -25,52 +25,54 @@ export interface Theme {
 }
 
 const semantic = {
-  accent: '#2563EB',
-  accentLight: '#DBEAFE',
-  critical: '#EF4444',
-  criticalLight: '#FEE2E2',
-  serious: '#F97316',
-  seriousLight: '#FFEDD5',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  advice: '#6B7280',
-  adviceLight: '#F3F4F6',
-  success: '#10B981',
-  successLight: '#D1FAE5',
-};
-
-export const lightTheme: Theme = {
-  bg: '#FAFAFA',
-  surface: '#FFFFFF',
-  surfaceSecondary: '#F3F4F6',
-  border: '#E5E7EB',
-  text: {
-    primary: '#111827',
-    secondary: '#6B7280',
-    tertiary: '#9CA3AF',
-  },
-  statusBar: 'dark',
-  ...semantic,
+  accent: '#1E88E5',
+  accentLight: 'rgba(30,136,229,0.15)',
+  critical: '#EF5350',
+  criticalLight: 'rgba(239,83,80,0.12)',
+  serious: '#FFA726',
+  seriousLight: 'rgba(255,167,38,0.12)',
+  warning: '#FFD54F',
+  warningLight: 'rgba(255,213,79,0.10)',
+  advice: '#78909C',
+  adviceLight: 'rgba(120,144,156,0.12)',
+  success: '#66BB6A',
+  successLight: 'rgba(102,187,106,0.12)',
 };
 
 export const darkTheme: Theme = {
-  bg: '#0F172A',
-  surface: '#1E293B',
-  surfaceSecondary: '#0F172A',
-  border: '#334155',
+  bg: '#101214',
+  surface: '#181C20',
+  surfaceSecondary: '#1E2228',
+  border: '#2A3040',
   text: {
-    primary: '#F1F5F9',
-    secondary: '#94A3B8',
-    tertiary: '#64748B',
+    primary: '#E8ECF0',
+    secondary: '#8A97A8',
+    tertiary: '#4E5A68',
   },
   statusBar: 'light',
   ...semantic,
-  accentLight: '#1E3A5F',
-  criticalLight: '#3B1212',
-  seriousLight: '#3B1F0A',
-  warningLight: '#3B2D05',
-  adviceLight: '#1E293B',
-  successLight: '#0A2E1E',
+};
+
+export const lightTheme: Theme = {
+  bg: '#F0F3F7',
+  surface: '#FFFFFF',
+  surfaceSecondary: '#EAECF0',
+  border: '#D0D7E2',
+  text: {
+    primary: '#0D1117',
+    secondary: '#4A5568',
+    tertiary: '#9AA5B4',
+  },
+  statusBar: 'dark',
+  ...semantic,
+  accent: '#1565C0',
+  accentLight: 'rgba(21,101,192,0.10)',
+  success: '#388E3C',
+  successLight: 'rgba(56,142,60,0.08)',
+  critical: '#E53935',
+  criticalLight: 'rgba(229,57,53,0.08)',
+  serious: '#EF6C00',
+  seriousLight: 'rgba(239,108,0,0.10)',
 };
 
 export type ThemeMode = 'light' | 'dark' | 'system';

@@ -5,6 +5,10 @@ from sqlalchemy.orm import selectinload
 
 import io
 
+import openpyxl
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
+
 from app.database import Analysis, Issue, async_session
 from app.services.export_xlsx import export_history, export_single_analysis
 
@@ -86,6 +90,134 @@ AGENT_LABELS = {
     "completeness": "Полнота",
     "scientific": "Научность",
 }
+
+
+@router.get("/api/export/expert-evaluation/xlsx")
+async def export_expert_evaluation_xlsx(
+    expert_name: str | None = Query(None, description="Имя эксперта — проставляется в колонку 'Эксперт'"),
+    expert_comment: str | None = Query(None, description="Комментарий эксперта — проставляется во все строки"),
+):
+    """Export expert evaluation template pre-filled with AI scores for all completed analyses."""
+    async with async_session() as db:
+        result = await db.execute(
+            select(Analysis)
+            .options(selectinload(Analysis.agent_results))
+            .where(Analysis.status == "completed")
+            .order_by(Analysis.created_at.desc())
+        )
+        analyses = result.scalars().all()
+
+    # Maps criterion column → (max_points, agent_name_that_sources_score)
+    # Agent scores are 0-100; scaled to max_points
+    CRITERIA = [
+        ("Стратегическая\nрелевантность\n(20%)", 20, "logical"),
+        ("Цель и задачи\n(10%)",                  10, "structural"),
+        ("Научная\nновизна\n(15%)",                15, "scientific"),
+        ("Практическая\nприменимость\n(20%)",      20, "completeness"),
+        ("Ожидаемые\nрезультаты\n(15%)",           15, "scientific"),
+        ("Соц-экономический\nэффект\n(10%)",       10, "completeness"),
+        ("Реализуемость\n(10%)",                   10, "logical"),
+    ]
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Экспертная оценка"
+
+    # Styles
+    header_font = Font(bold=True, color="FFFFFF", size=10)
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+    center_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+    left_align = Alignment(horizontal="left", vertical="center", wrap_text=True)
+    thin_border = Border(
+        left=Side(style="thin"),
+        right=Side(style="thin"),
+        top=Side(style="thin"),
+        bottom=Side(style="thin"),
+    )
+    score_fill = PatternFill("solid", fgColor="D6E4F0")
+    auto_fill = PatternFill("solid", fgColor="E8F5E9")  # light green = auto-filled
+
+    COLUMNS = (
+        [("№", 5), ("Название ТЗ", 30), ("Организация", 20), ("Эксперт", 20)]
+        + [(c[0], 14) for c in CRITERIA]
+        + [("Итоговый\nбалл", 12), ("Комментарий эксперта", 38)]
+    )
+
+    ws.row_dimensions[1].height = 65
+
+    for col_idx, (header, width) in enumerate(COLUMNS, start=1):
+        cell = ws.cell(row=1, column=col_idx, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center_align
+        cell.border = thin_border
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    for row_num, analysis in enumerate(analyses, start=2):
+        ws.row_dimensions[row_num].height = 30
+
+        # Build agent score lookup
+        agent_scores: dict[str, float] = {}
+        for ar in analysis.agent_results:
+            if ar.score is not None:
+                agent_scores[ar.agent_name] = ar.score
+
+        # Fixed columns: №, Название ТЗ, Организация, Эксперт
+        fixed = [row_num - 1, analysis.filename or "Текст", "", expert_name or ""]
+        for col_idx, value in enumerate(fixed, start=1):
+            cell = ws.cell(row=row_num, column=col_idx, value=value)
+            cell.border = thin_border
+            cell.alignment = left_align if col_idx == 2 else center_align
+
+        # Criteria score columns (cols 5..5+len(CRITERIA)-1)
+        for i, (_, max_pts, agent_name) in enumerate(CRITERIA):
+            col_idx = 5 + i
+            agent_score = agent_scores.get(agent_name)
+            if agent_score is not None:
+                # Scale: agent 0-100 → 0-max_pts, rounded to 1 decimal
+                value = round(agent_score / 100 * max_pts, 1)
+                fill = auto_fill
+            else:
+                value = None
+                fill = score_fill
+            cell = ws.cell(row=row_num, column=col_idx, value=value)
+            cell.fill = fill
+            cell.border = thin_border
+            cell.alignment = center_align
+
+        # Итоговый балл: SUM of criteria cols
+        score_col_start = get_column_letter(5)
+        score_col_end = get_column_letter(5 + len(CRITERIA) - 1)
+        total_cell = ws.cell(
+            row=row_num,
+            column=5 + len(CRITERIA),
+            value=f"=SUM({score_col_start}{row_num}:{score_col_end}{row_num})",
+        )
+        total_cell.font = Font(bold=True)
+        total_cell.border = thin_border
+        total_cell.alignment = center_align
+
+        # Comment column — pre-fill if expert_comment was provided
+        comment_cell = ws.cell(row=row_num, column=5 + len(CRITERIA) + 1, value=expert_comment or "")
+        comment_cell.border = thin_border
+        comment_cell.alignment = left_align
+
+    # Legend row
+    legend_row = len(analyses) + 3
+    ws.cell(row=legend_row, column=1, value="🟩 — рассчитано автоматически на основе AI-анализа, 🟦 — заполните вручную")
+    ws.cell(row=legend_row, column=1).font = Font(italic=True, size=9, color="555555")
+
+    ws.freeze_panes = "A2"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="expert_evaluation.xlsx"'},
+    )
 
 
 @router.get("/api/export/{analysis_id}/pdf")

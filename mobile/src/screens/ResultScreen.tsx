@@ -29,7 +29,7 @@ export default function ResultScreen() {
   const { analysisId } = route.params;
   const { data: result, isLoading } = useAnalysisResult(analysisId);
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'recommendations'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'issues' | 'recommendations' | 'diff'>('overview');
   const [severityFilter, setSeverityFilter] = useState('all');
 
   if (isLoading || !result) {
@@ -72,10 +72,12 @@ export default function ResultScreen() {
     advice: result.issues.filter((i) => i.severity === 'advice').length,
   };
 
+  const correctionsCount = result.corrections?.length ?? 0;
   const TABS = [
     { key: 'overview', label: t('overview') },
     { key: 'issues', label: `${t('issues')} (${result.issues.length})` },
     { key: 'recommendations', label: t('recommendations') },
+    { key: 'diff', label: `Правки (${correctionsCount})` },
   ] as const;
 
   return (
@@ -173,9 +175,74 @@ export default function ResultScreen() {
         .map((issue) => (
           <Card key={issue.id} style={[styles.recCard, { borderLeftColor: SEVERITY_BORDER[issue.severity] || theme.border }]}>
             <Text style={[styles.recTitle, { color: theme.text.primary }]} numberOfLines={2}>{issue.title}</Text>
+            {issue.document_quote && (
+              <View style={[styles.quoteBlock, { backgroundColor: theme.surfaceSecondary }]}>
+                <Ionicons name="chatbox-ellipses-outline" size={12} color={theme.text.tertiary} />
+                <Text style={[styles.quoteText, { color: theme.text.secondary }]} numberOfLines={3}>
+                  «{issue.document_quote}»
+                </Text>
+              </View>
+            )}
             <Text style={[styles.recText, { color: theme.success }]}>{issue.recommendation}</Text>
           </Card>
         ))}
+
+      {/* Diff — Исправления ТЗ */}
+      {activeTab === 'diff' && (
+        <View>
+          {!result.corrections || result.corrections.length === 0 ? (
+            <View style={styles.emptyDiff}>
+              <Ionicons name="checkmark-circle-outline" size={48} color={theme.success} />
+              <Text style={[styles.emptyDiffText, { color: theme.text.tertiary }]}>
+                Нет предложенных правок
+              </Text>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.diffHeader, { color: theme.text.secondary }]}>
+                Ниже показаны конкретные исправления текста ТЗ, предложенные AI агентом-корректором.
+              </Text>
+              {result.corrections.map((c, idx) => {
+                const borderColor = SEVERITY_BORDER[c.severity] || theme.border;
+                return (
+                  <View key={c.id ?? idx} style={[styles.diffCard, { borderColor, backgroundColor: theme.surface }]}>
+                    {/* Section */}
+                    <View style={[styles.diffSectionBadge, { backgroundColor: theme.accentLight }]}>
+                      <Ionicons name="document-text-outline" size={12} color={theme.accent} />
+                      <Text style={[styles.diffSectionText, { color: theme.accent }]} numberOfLines={1}>
+                        {c.section || 'Раздел не указан'}
+                      </Text>
+                    </View>
+
+                    {/* Original */}
+                    <View style={[styles.diffBlock, { backgroundColor: '#FEF2F2' }]}>
+                      <Text style={styles.diffBlockLabel}>— Оригинал</Text>
+                      <Text style={styles.diffOrigText}>{c.original_text}</Text>
+                    </View>
+
+                    {/* Arrow */}
+                    <View style={styles.diffArrow}>
+                      <Ionicons name="arrow-down" size={16} color={theme.text.tertiary} />
+                    </View>
+
+                    {/* Suggested */}
+                    <View style={[styles.diffBlock, { backgroundColor: '#F0FDF4' }]}>
+                      <Text style={[styles.diffBlockLabel, { color: '#166534' }]}>+ Исправление</Text>
+                      <Text style={[styles.diffSuggestText]}>{c.suggested_text}</Text>
+                    </View>
+
+                    {/* Reason */}
+                    <View style={styles.diffReason}>
+                      <Ionicons name="information-circle-outline" size={13} color={theme.text.tertiary} />
+                      <Text style={[styles.diffReasonText, { color: theme.text.tertiary }]}>{c.reason}</Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </>
+          )}
+        </View>
+      )}
     </ScrollView>
   );
 }
@@ -209,4 +276,21 @@ const styles = StyleSheet.create({
   errorCardDate: { fontSize: 13, marginBottom: 20 },
   retryBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 8 },
   retryBtnText: { color: '#FFF', fontWeight: '600', fontSize: 14 },
+  // Recommendations with quotes
+  quoteBlock: { flexDirection: 'row', gap: 6, alignItems: 'flex-start', padding: 8, borderRadius: 6, marginBottom: 6, marginTop: 4 },
+  quoteText: { flex: 1, fontSize: 12, fontStyle: 'italic', lineHeight: 18 },
+  // Diff tab
+  diffHeader: { fontSize: 13, lineHeight: 18, marginBottom: 12 },
+  emptyDiff: { alignItems: 'center', paddingVertical: 48, gap: 12 },
+  emptyDiffText: { fontSize: 15 },
+  diffCard: { borderWidth: 2, borderRadius: 12, marginBottom: 14, overflow: 'hidden' },
+  diffSectionBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 8 },
+  diffSectionText: { fontSize: 12, fontWeight: '600', flex: 1 },
+  diffBlock: { paddingHorizontal: 12, paddingVertical: 10 },
+  diffBlockLabel: { fontSize: 11, fontWeight: '700', color: '#991B1B', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  diffOrigText: { fontSize: 13, lineHeight: 20, color: '#991B1B', fontFamily: 'monospace' },
+  diffSuggestText: { fontSize: 13, lineHeight: 20, color: '#166534', fontFamily: 'monospace' },
+  diffArrow: { alignItems: 'center', paddingVertical: 4, backgroundColor: '#F3F4F6' },
+  diffReason: { flexDirection: 'row', alignItems: 'flex-start', gap: 6, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: '#F9FAFB' },
+  diffReasonText: { flex: 1, fontSize: 12, lineHeight: 17 },
 });

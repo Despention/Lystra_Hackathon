@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   IoSunny,
   IoMoon,
@@ -7,10 +7,15 @@ import {
   IoLink,
   IoRefresh,
   IoCheckmark,
+  IoCloudOutline,
+  IoEyeOutline,
+  IoEyeOffOutline,
 } from 'react-icons/io5';
 import { useTheme, useTranslation } from '../contexts/ThemeContext';
 import { useSettingsStore } from '../store/settingsStore';
-import { checkHealth } from '../services/api';
+import type { CloudProvider } from '../store/settingsStore';
+import { checkHealth, getServerSettings, updateServerSettings } from '../services/api';
+import type { ServerLLMSettings } from '../services/api';
 import Spinner from '../components/Spinner';
 import type { ThemeMode } from '../constants/themes';
 import type { Language } from '../constants/translations';
@@ -32,6 +37,14 @@ export default function SettingsPage() {
   const [urlDraft, setUrlDraft] = useState(store.serverUrl);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [checking, setChecking] = useState(true);
+
+  // Cloud API state
+  const [serverSettings, setServerSettings] = useState<ServerLLMSettings | null>(null);
+  const [apiKeyDraft, setApiKeyDraft] = useState('');
+  const [cloudModelDraft, setCloudModelDraft] = useState(store.cloudModel);
+  const [savingCloud, setSavingCloud] = useState(false);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
+  const apiKeyRef = useRef<HTMLInputElement>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -57,12 +70,22 @@ export default function SettingsPage() {
     }
   }, []);
 
+  const fetchServerSettings = useCallback(async () => {
+    try {
+      const s = await getServerSettings();
+      setServerSettings(s);
+    } catch {
+      // server may be offline
+    }
+  }, []);
+
   // Poll every 10 seconds
   useEffect(() => {
     fetchHealth();
+    fetchServerSettings();
     const interval = setInterval(fetchHealth, 10000);
     return () => clearInterval(interval);
-  }, [fetchHealth]);
+  }, [fetchHealth, fetchServerSettings]);
 
   function saveUrl() {
     const trimmed = urlDraft.trim();
@@ -73,6 +96,57 @@ export default function SettingsPage() {
     store.setServerUrl(trimmed.replace(/\/$/, ''));
     window.alert('Server URL saved');
     setTimeout(fetchHealth, 500);
+    setTimeout(fetchServerSettings, 600);
+  }
+
+  async function saveCloudSettings() {
+    const provider = store.cloudProvider;
+    const model = cloudModelDraft.trim();
+
+    if (provider === 'none') {
+      window.alert('Выберите провайдера: Anthropic или OpenAI');
+      return;
+    }
+    if (!apiKeyDraft.trim() && !serverSettings?.cloud_api_key_set) {
+      window.alert('Введите API ключ');
+      return;
+    }
+
+    try {
+      setSavingCloud(true);
+      const payload: Parameters<typeof updateServerSettings>[0] = {
+        cloud_provider: provider,
+        use_cloud_llm: true,
+        use_mock_llm: false,
+      };
+      if (apiKeyDraft.trim()) payload.cloud_api_key = apiKeyDraft.trim();
+      if (model) payload.cloud_model = model;
+
+      const updated = await updateServerSettings(payload);
+      store.setCloudProvider(provider);
+      store.setCloudModel(model);
+      if (apiKeyDraft.trim()) {
+        store.setCloudApiKey('***');
+        setApiKeyDraft('');
+      }
+      setServerSettings(updated);
+      window.alert(`Облачная модель ${provider} активирована`);
+    } catch (e: any) {
+      window.alert(e?.message || 'Не удалось сохранить настройки');
+    } finally {
+      setSavingCloud(false);
+    }
+  }
+
+  async function disableCloudAndUseMock() {
+    try {
+      const updated = await updateServerSettings({ use_cloud_llm: false, use_mock_llm: true });
+      store.setCloudProvider('none');
+      setServerSettings(updated);
+      window.alert('Переключено на Mock режим');
+    } catch (e: any) {
+      window.alert(e?.message || 'Не удалось переключить режим');
+    }
   }
 
   const themeOptions: { value: ThemeMode; icon: React.ReactNode; label: string }[] = [
@@ -176,6 +250,116 @@ export default function SettingsPage() {
         <button className="settings__save-btn" onClick={saveUrl}>
           {t('save')}
         </button>
+      </div>
+
+      {/* Cloud API */}
+      <p className="settings__section-header">
+        <IoCloudOutline className="settings__section-icon" />
+        Облачная модель
+      </p>
+      <div className="settings__card">
+        {/* Provider selector */}
+        <p className="settings__label">Провайдер</p>
+        <div className="settings__segmented">
+          {(['none', 'anthropic', 'openai'] as CloudProvider[]).map((p) => (
+            <button
+              key={p}
+              className={`settings__segment ${store.cloudProvider === p ? 'settings__segment--active' : ''}`}
+              onClick={() => store.setCloudProvider(p)}
+            >
+              <span className="settings__segment-text">
+                {p === 'none' ? 'Нет' : p === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        {store.cloudProvider !== 'none' && (
+          <>
+            <p className="settings__label settings__label--mt">
+              API ключ{serverSettings?.cloud_api_key_set ? ' (уже задан)' : ''}
+            </p>
+            <div className="settings__api-key-row">
+              <input
+                ref={apiKeyRef}
+                className="settings__input settings__input--flex"
+                type={apiKeyVisible ? 'text' : 'password'}
+                value={apiKeyDraft}
+                onChange={(e) => setApiKeyDraft(e.target.value)}
+                placeholder={
+                  serverSettings?.cloud_api_key_set
+                    ? '••••••• (обновить)'
+                    : store.cloudProvider === 'anthropic'
+                      ? 'sk-ant-api03-...'
+                      : 'sk-...'
+                }
+                autoComplete="off"
+                spellCheck={false}
+              />
+              <button
+                className="settings__eye-btn"
+                onClick={() => setApiKeyVisible((v) => !v)}
+                title={apiKeyVisible ? 'Скрыть' : 'Показать'}
+              >
+                {apiKeyVisible ? <IoEyeOffOutline /> : <IoEyeOutline />}
+              </button>
+            </div>
+
+            <p className="settings__label settings__label--mt">Модель (необязательно)</p>
+            <input
+              className="settings__input"
+              value={cloudModelDraft}
+              onChange={(e) => setCloudModelDraft(e.target.value)}
+              placeholder={
+                store.cloudProvider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini'
+              }
+              autoComplete="off"
+              spellCheck={false}
+            />
+
+            <button
+              className="settings__save-btn"
+              onClick={saveCloudSettings}
+              disabled={savingCloud}
+              style={{ opacity: savingCloud ? 0.6 : 1 }}
+            >
+              {savingCloud ? <Spinner size="small" color="#fff" /> : 'Применить и активировать'}
+            </button>
+
+            {serverSettings?.use_cloud_llm && (
+              <button
+                className="settings__save-btn settings__save-btn--secondary"
+                onClick={disableCloudAndUseMock}
+                style={{ marginTop: 8 }}
+              >
+                Отключить (вернуть Mock)
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Current mode indicator */}
+        {serverSettings && (
+          <div className="settings__status-row settings__cloud-status">
+            <div
+              className="settings__status-dot"
+              style={{
+                backgroundColor: serverSettings.use_cloud_llm
+                  ? 'var(--success)'
+                  : serverSettings.use_mock_llm
+                    ? 'var(--warning)'
+                    : 'var(--critical)',
+              }}
+            />
+            <span className="settings__status-text" style={{ marginLeft: 0 }}>
+              {serverSettings.use_cloud_llm
+                ? `Активно: ${serverSettings.cloud_provider} / ${serverSettings.cloud_model || 'default'}`
+                : serverSettings.use_mock_llm
+                  ? 'Mock режим'
+                  : 'Локальная модель (llama.cpp)'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Appearance */}

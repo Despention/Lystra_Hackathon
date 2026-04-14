@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { IoSearch, IoCloseCircle, IoTime, IoTrash, IoDownload, IoFolder, IoWarning } from 'react-icons/io5';
+import { IoSearch, IoCloseCircle, IoTime, IoTrash, IoDownload, IoFolder, IoWarning, IoGrid } from 'react-icons/io5';
 import { useTheme, useTranslation } from '../contexts/ThemeContext';
 import { useHistory } from '../hooks/useAnalysis';
-import { deleteAnalysis, moveAnalysisToFolder, downloadHistoryXlsx } from '../services/api';
+import { deleteAnalysis, moveAnalysisToFolder, downloadHistoryXlsx, downloadExpertEvalXlsx } from '../services/api';
 import { useFolderStore } from '../store/folderStore';
 import FolderSidebar from '../components/FolderSidebar';
 import FolderModal from '../components/FolderModal';
@@ -159,6 +159,14 @@ export default function HistoryPage() {
             >
               <IoDownload />
               {t('exportXlsx')}
+            </button>
+            <button
+              className="history__xlsx-btn history__xlsx-btn--expert"
+              onClick={() => downloadExpertEvalXlsx()}
+              title="Скачать шаблон экспертной оценки для жюри (с автозаполненными баллами)"
+            >
+              <IoGrid />
+              Экспертная оценка
             </button>
           </div>
 

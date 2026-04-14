@@ -11,6 +11,7 @@ from app.agents.scientific import ScientificAgent
 from app.agents.structural import StructuralAgent
 from app.agents.terminological import TerminologicalAgent
 from app.config import settings
+from app.knowledge.prompts import IMPROVED_TZ_SYSTEM_PROMPT
 from app.services.deduplication import deduplicate_issues
 from app.services.document_parser import ParsedDocument, chunk_document_for_agent
 from app.services.json_parser import parse_json_from_llm
@@ -217,6 +218,29 @@ async def run_analysis(
         "all_failed": all_failed,
         "mostly_failed": mostly_failed,
     }
+
+
+async def run_improved_tz_agent(document: ParsedDocument, corrections: list, llm) -> str:
+    """Generate an improved TZ text incorporating all found corrections."""
+    corrections_text = "\n".join(
+        f"- [{c.get('severity', 'advice')}] Раздел «{c.get('section', '')}»: "
+        f"заменить «{c.get('original', '')[:120]}» на «{c.get('suggested', '')[:120]}»"
+        for c in corrections[:15]
+    )
+    doc_excerpt = document.full_text[:8000]
+    user_prompt = (
+        f"ИСХОДНЫЙ ТЕКСТ ТЗ:\n{doc_excerpt}\n\n"
+        f"СПИСОК ИСПРАВЛЕНИЙ:\n{corrections_text or 'Исправлений нет — улучши общую структуру и формулировки.'}"
+    )
+    try:
+        result = await asyncio.wait_for(
+            llm.complete(IMPROVED_TZ_SYSTEM_PROMPT, user_prompt),
+            timeout=180,
+        )
+        return result
+    except Exception as e:
+        logger.error("Improved TZ agent failed: %s", e)
+        return ""
 
 
 async def run_correction_agent(document, agent_results, llm, on_event=None):

@@ -5,6 +5,9 @@
   border: 1px solid var(--border);
   border-left: 4px solid var(--accent);
   background-color: var(--surface);
+  box-shadow:
+    5px 5px 12px var(--neu-shadow-dark),
+    -3px -3px 8px var(--neu-shadow-light);
 }
 
 .summary-card__header {

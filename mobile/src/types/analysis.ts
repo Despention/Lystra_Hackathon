@@ -19,6 +19,16 @@ export interface AgentResultData {
   completed_at: string | null;
 }
 
+export interface Correction {
+  id: string;
+  analysis_id: string;
+  section: string;
+  original_text: string;
+  suggested_text: string;
+  reason: string;
+  severity: 'critical' | 'serious' | 'warning' | 'advice';
+}
+
 export interface AnalysisResult {
   id: string;
   filename: string | null;
@@ -29,8 +39,10 @@ export interface AnalysisResult {
   completed_at: string | null;
   mode: string;
   not_ready: string | null;
+  summary: string | null;
   agent_results: AgentResultData[];
   issues: Issue[];
+  corrections: Correction[];
 }
 
 export interface AnalysisListItem {

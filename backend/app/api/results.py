@@ -47,6 +47,7 @@ async def get_analysis(analysis_id: str):
             mode=analysis.mode,
             not_ready=analysis.not_ready,
             summary=analysis.summary,
+            improved_text=analysis.improved_text,
             folder_id=analysis.folder_id,
             agent_results=[
                 AgentResultResponse(

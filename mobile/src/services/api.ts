@@ -61,6 +61,35 @@ export async function checkHealth(): Promise<{ status: string; llm_available: bo
   return data;
 }
 
+export interface ServerLLMSettings {
+  use_mock_llm: boolean;
+  use_cloud_llm: boolean;
+  cloud_provider: string;
+  cloud_model: string;
+  cloud_api_key_set: boolean;
+  llama_cpp_base_url: string;
+  llama_cpp_model_large: string;
+  llm_max_context_chars: number;
+}
+
+export async function getServerSettings(): Promise<ServerLLMSettings> {
+  const { data } = await api.get('/api/settings');
+  return data;
+}
+
+export async function updateServerSettings(payload: {
+  use_mock_llm?: boolean;
+  use_cloud_llm?: boolean;
+  cloud_provider?: string;
+  cloud_api_key?: string;
+  cloud_model?: string;
+  llama_cpp_base_url?: string;
+  llm_max_context_chars?: number;
+}): Promise<ServerLLMSettings> {
+  const { data } = await api.post('/api/settings', payload);
+  return data;
+}
+
 export function getWsUrl(analysisId: string): string {
   const base = useSettingsStore.getState().serverUrl.replace(/^http/, 'ws');
   return `${base}/ws/${analysisId}`;

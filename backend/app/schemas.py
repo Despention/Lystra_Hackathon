@@ -53,6 +53,7 @@ class AnalysisResponse(BaseModel):
     mode: str
     not_ready: str | None
     summary: str | None = None
+    improved_text: str | None = None
     folder_id: str | None = None
     agent_results: list[AgentResultResponse]
     issues: list[IssueResponse]
@@ -102,3 +103,52 @@ class HealthResponse(BaseModel):
     use_mock: bool = False
     database: str
     version: str
+
+
+class LLMSettingsResponse(BaseModel):
+    use_mock_llm: bool
+    use_cloud_llm: bool
+    cloud_provider: str  # "none" | "anthropic" | "openai"
+    cloud_model: str
+    cloud_api_key_set: bool  # True если ключ задан (не раскрываем сам ключ)
+    llama_cpp_base_url: str
+    llama_cpp_model_large: str
+    llm_max_context_chars: int
+
+
+class ChatRequest(BaseModel):
+    analysis_id: str
+    message: str
+    history: list[dict] = []
+
+
+class ChatResponse(BaseModel):
+    reply: str
+
+
+class GenerateStructureRequest(BaseModel):
+    topic: str
+    description: str = ""
+
+
+class GenerateStructureResponse(BaseModel):
+    structure: str
+
+
+class GenerateExampleRequest(BaseModel):
+    topic: str
+
+
+class GenerateExampleResponse(BaseModel):
+    example_tz: str
+
+
+class LLMSettingsUpdateRequest(BaseModel):
+    use_mock_llm: bool | None = None
+    use_cloud_llm: bool | None = None
+    cloud_provider: str | None = None   # "none" | "anthropic" | "openai"
+    cloud_api_key: str | None = None    # "" = очистить ключ
+    cloud_model: str | None = None
+    llama_cpp_base_url: str | None = None
+    llama_cpp_model_large: str | None = None
+    llm_max_context_chars: int | None = None

@@ -2,7 +2,7 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # LLM
+    # LLM — local (llama.cpp)
     llama_cpp_base_url: str = "http://localhost:8080/v1"
     # Отдельный URL для малой модели (если запускаешь второй сервер).
     # Если не задан — малые агенты тоже идут на llama_cpp_base_url.
@@ -11,11 +11,20 @@ class Settings(BaseSettings):
     llama_cpp_model_small: str = "gemma-4-E4B-it-Q4_K_M"
     use_mock_llm: bool = True
 
+    # Cloud LLM (Anthropic / OpenAI)
+    # cloud_provider: "none" | "anthropic" | "openai"
+    cloud_provider: str = "none"
+    cloud_api_key: str = ""
+    # Model name, e.g. "claude-sonnet-4-6" or "gpt-4o"
+    cloud_model: str = ""
+    # When cloud_provider != "none", cloud is used instead of llama.cpp/mock
+    use_cloud_llm: bool = False
+
     # LLM reliability
     llm_max_retries: int = 3
     llm_retry_backoff: float = 1.0  # base delay in seconds for exponential backoff
     llm_timeout_seconds: int = 120
-    llm_max_context_chars: int = 6000
+    llm_max_context_chars: int = 12000  # larger for cloud models
 
     # LLM cache
     llm_cache_enabled: bool = True

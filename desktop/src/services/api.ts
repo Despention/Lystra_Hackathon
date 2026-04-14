@@ -61,6 +61,35 @@ export async function checkHealth(): Promise<{ status: string; llm_available: bo
   return data;
 }
 
+export interface ServerLLMSettings {
+  use_mock_llm: boolean;
+  use_cloud_llm: boolean;
+  cloud_provider: string;
+  cloud_model: string;
+  cloud_api_key_set: boolean;
+  llama_cpp_base_url: string;
+  llama_cpp_model_large: string;
+  llm_max_context_chars: number;
+}
+
+export async function getServerSettings(): Promise<ServerLLMSettings> {
+  const { data } = await api.get('/api/settings');
+  return data;
+}
+
+export async function updateServerSettings(payload: {
+  use_mock_llm?: boolean;
+  use_cloud_llm?: boolean;
+  cloud_provider?: string;
+  cloud_api_key?: string;
+  cloud_model?: string;
+  llama_cpp_base_url?: string;
+  llm_max_context_chars?: number;
+}): Promise<ServerLLMSettings> {
+  const { data } = await api.post('/api/settings', payload);
+  return data;
+}
+
 export function getWsUrl(analysisId: string): string {
   const base = useSettingsStore.getState().serverUrl.replace(/^http/, 'ws');
   return `${base}/ws/${analysisId}`;
@@ -110,6 +139,38 @@ export async function downloadHistoryXlsx(folderId?: string): Promise<void> {
   a.download = 'history.xlsx';
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export async function downloadExpertEvalXlsx(expertName?: string, expertComment?: string): Promise<void> {
+  const params: Record<string, string> = {};
+  if (expertName?.trim()) params.expert_name = expertName.trim();
+  if (expertComment?.trim()) params.expert_comment = expertComment.trim();
+  const response = await api.get('/api/export/expert-evaluation/xlsx', { params, responseType: 'blob' });
+  const url = URL.createObjectURL(response.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'expert_evaluation.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+export async function sendChatMessage(
+  analysisId: string,
+  message: string,
+  history: { role: 'user' | 'assistant'; content: string }[],
+): Promise<string> {
+  const { data } = await api.post('/api/chat', { analysis_id: analysisId, message, history });
+  return data.reply as string;
+}
+
+export async function generateTzStructure(topic: string, description = ''): Promise<string> {
+  const { data } = await api.post('/api/generate/structure', { topic, description });
+  return data.structure as string;
+}
+
+export async function generateTzExample(topic: string): Promise<string> {
+  const { data } = await api.post('/api/generate/example', { topic });
+  return data.example_tz as string;
 }
 
 export default api;

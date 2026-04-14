@@ -14,7 +14,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme, useTranslation } from '../contexts/ThemeContext';
 import { useSettingsStore } from '../store/settingsStore';
-import { checkHealth } from '../services/api';
+import type { CloudProvider } from '../store/settingsStore';
+import { checkHealth, getServerSettings, updateServerSettings } from '../services/api';
+import type { ServerLLMSettings } from '../services/api';
 import type { ThemeMode } from '../constants/themes';
 import type { Language } from '../constants/translations';
 
@@ -34,6 +36,13 @@ export default function SettingsScreen() {
   const [urlDraft, setUrlDraft] = useState(store.serverUrl);
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [checking, setChecking] = useState(true);
+
+  // Cloud API state
+  const [serverSettings, setServerSettings] = useState<ServerLLMSettings | null>(null);
+  const [apiKeyDraft, setApiKeyDraft] = useState('');
+  const [cloudModelDraft, setCloudModelDraft] = useState(store.cloudModel);
+  const [savingCloud, setSavingCloud] = useState(false);
+  const [apiKeyVisible, setApiKeyVisible] = useState(false);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -59,12 +68,22 @@ export default function SettingsScreen() {
     }
   }, []);
 
+  const fetchServerSettings = useCallback(async () => {
+    try {
+      const s = await getServerSettings();
+      setServerSettings(s);
+    } catch {
+      // server may be offline
+    }
+  }, []);
+
   // Poll every 10 seconds
   useEffect(() => {
     fetchHealth();
+    fetchServerSettings();
     const interval = setInterval(fetchHealth, 10000);
     return () => clearInterval(interval);
-  }, [fetchHealth]);
+  }, [fetchHealth, fetchServerSettings]);
 
   function saveUrl() {
     const trimmed = urlDraft.trim();
@@ -76,6 +95,57 @@ export default function SettingsScreen() {
     Alert.alert('Сохранено', 'URL сервера обновлён');
     // Re-check health with new URL
     setTimeout(fetchHealth, 500);
+    setTimeout(fetchServerSettings, 600);
+  }
+
+  async function saveCloudSettings() {
+    const provider = store.cloudProvider;
+    const model = cloudModelDraft.trim();
+
+    if (provider === 'none') {
+      Alert.alert('Ошибка', 'Выберите провайдера (Anthropic или OpenAI)');
+      return;
+    }
+    if (!apiKeyDraft.trim() && !serverSettings?.cloud_api_key_set) {
+      Alert.alert('Ошибка', 'Введите API ключ');
+      return;
+    }
+
+    try {
+      setSavingCloud(true);
+      const payload: any = {
+        cloud_provider: provider,
+        use_cloud_llm: true,
+        use_mock_llm: false,
+      };
+      if (apiKeyDraft.trim()) payload.cloud_api_key = apiKeyDraft.trim();
+      if (model) payload.cloud_model = model;
+
+      const updated = await updateServerSettings(payload);
+      store.setCloudProvider(provider);
+      store.setCloudModel(model);
+      if (apiKeyDraft.trim()) {
+        store.setCloudApiKey('***');  // не храним ключ в открытом виде на устройстве
+        setApiKeyDraft('');
+      }
+      setServerSettings(updated);
+      Alert.alert('Сохранено', `Облачная модель ${provider} активирована`);
+    } catch (e: any) {
+      Alert.alert('Ошибка', e?.message || 'Не удалось сохранить настройки');
+    } finally {
+      setSavingCloud(false);
+    }
+  }
+
+  async function disableCloudAndUseMock() {
+    try {
+      const updated = await updateServerSettings({ use_cloud_llm: false, use_mock_llm: true });
+      store.setCloudProvider('none');
+      setServerSettings(updated);
+      Alert.alert('Готово', 'Переключено на Mock режим');
+    } catch (e: any) {
+      Alert.alert('Ошибка', e?.message || 'Не удалось переключить режим');
+    }
   }
 
   const themeOptions: { value: ThemeMode; icon: string }[] = [
@@ -177,6 +247,102 @@ export default function SettingsScreen() {
           <TouchableOpacity style={s.saveBtn} onPress={saveUrl}>
             <Text style={s.saveBtnText}>{t('save')}</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* ── Cloud API ── */}
+        <Text style={s.sectionHeader}>Облачная модель</Text>
+        <View style={s.card}>
+          <Text style={s.label}>Провайдер</Text>
+          <View style={s.segmented}>
+            {(['none', 'anthropic', 'openai'] as CloudProvider[]).map((p) => (
+              <TouchableOpacity
+                key={p}
+                style={[s.segment, store.cloudProvider === p && s.segmentActive]}
+                onPress={() => store.setCloudProvider(p)}
+              >
+                <Text style={[s.segmentText, store.cloudProvider === p && s.segmentTextActive]}>
+                  {p === 'none' ? 'Нет' : p === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {store.cloudProvider !== 'none' && (
+            <>
+              <Text style={[s.label, { marginTop: 14 }]}>
+                API ключ {serverSettings?.cloud_api_key_set ? '(уже задан)' : ''}
+              </Text>
+              <View style={s.apiKeyRow}>
+                <TextInput
+                  style={[s.input, { flex: 1, marginBottom: 0 }]}
+                  value={apiKeyDraft}
+                  onChangeText={setApiKeyDraft}
+                  placeholder={serverSettings?.cloud_api_key_set ? '••••••• (обновить)' : 'sk-ant-... или sk-...'}
+                  placeholderTextColor={theme.text.tertiary}
+                  secureTextEntry={!apiKeyVisible}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  selectionColor={theme.accent}
+                />
+                <TouchableOpacity style={s.eyeBtn} onPress={() => setApiKeyVisible(!apiKeyVisible)}>
+                  <Ionicons name={apiKeyVisible ? 'eye-off-outline' : 'eye-outline'} size={20} color={theme.text.tertiary} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={[s.label, { marginTop: 10 }]}>
+                Модель (необязательно)
+              </Text>
+              <TextInput
+                style={s.input}
+                value={cloudModelDraft}
+                onChangeText={setCloudModelDraft}
+                placeholder={store.cloudProvider === 'anthropic' ? 'claude-sonnet-4-6' : 'gpt-4o-mini'}
+                placeholderTextColor={theme.text.tertiary}
+                autoCapitalize="none"
+                autoCorrect={false}
+                selectionColor={theme.accent}
+              />
+
+              <TouchableOpacity
+                style={[s.saveBtn, savingCloud && { opacity: 0.6 }]}
+                onPress={saveCloudSettings}
+                disabled={savingCloud}
+              >
+                {savingCloud
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={s.saveBtnText}>Применить и активировать</Text>}
+              </TouchableOpacity>
+
+              {serverSettings?.use_cloud_llm && (
+                <TouchableOpacity
+                  style={[s.saveBtn, { backgroundColor: theme.surfaceSecondary, marginTop: 8 }]}
+                  onPress={disableCloudAndUseMock}
+                >
+                  <Text style={[s.saveBtnText, { color: theme.text.secondary }]}>Отключить (вернуть Mock)</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+
+          {/* Status indicator */}
+          {serverSettings && (
+            <View style={[s.statusRow, { marginTop: 12 }]}>
+              <View style={[s.statusDot, {
+                backgroundColor: serverSettings.use_cloud_llm
+                  ? theme.success
+                  : serverSettings.use_mock_llm
+                    ? theme.warning
+                    : theme.critical,
+              }]} />
+              <Text style={[s.statusText, { marginLeft: 0 }]}>
+                {serverSettings.use_cloud_llm
+                  ? `Активно: ${serverSettings.cloud_provider} / ${serverSettings.cloud_model || 'default'}`
+                  : serverSettings.use_mock_llm
+                    ? 'Mock режим'
+                    : 'Локальная модель (llama.cpp)'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* ── Appearance ── */}
@@ -378,6 +544,8 @@ function makeStyles(theme: ReturnType<typeof useTheme>) {
     },
     segmentText: { fontSize: 12, color: theme.text.tertiary },
     segmentTextActive: { color: theme.accent, fontWeight: '600' },
+    apiKeyRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    eyeBtn: { padding: 8 },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
