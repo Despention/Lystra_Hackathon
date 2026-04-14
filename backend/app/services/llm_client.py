@@ -29,6 +29,31 @@ _RETRYABLE_EXCEPTIONS = (
 )
 
 
+# Per-base-url semaphore: local llama.cpp serves one request at a time, so 5
+# agents × N analyses running in parallel would otherwise pile up on the server.
+# Keyed by base_url so separate servers (e.g. large + small) get independent
+# concurrency budgets.
+_semaphores: dict[str, asyncio.Semaphore] = {}
+_semaphores_lock = asyncio.Lock()
+
+
+async def _get_semaphore(base_url: str) -> asyncio.Semaphore:
+    """Return (lazily create) a semaphore scoped to this base_url."""
+    sem = _semaphores.get(base_url)
+    if sem is not None:
+        return sem
+    async with _semaphores_lock:
+        sem = _semaphores.get(base_url)
+        if sem is None:
+            sem = asyncio.Semaphore(settings.llm_max_concurrent)
+            _semaphores[base_url] = sem
+            logger.debug(
+                "Created LLM semaphore base_url=%s limit=%d",
+                base_url, settings.llm_max_concurrent,
+            )
+        return sem
+
+
 def _is_context_overflow(err: Exception) -> bool:
     """Detect if the error is a context-window overflow from llama-server or OpenAI."""
     msg = str(err).lower()
@@ -55,6 +80,7 @@ class LLMClient:
             api_key="sk-no-key-required",
             timeout=settings.llm_timeout_seconds,
         )
+        self.base_url = base_url
         self.model = model
 
     async def _call_with_retry(self, coro_factory, stream: bool = False):
@@ -88,6 +114,11 @@ class LLMClient:
                     "LLM retry %d/%d after %.1fs: %s",
                     attempt, max_retries, delay, err,
                 )
+                try:
+                    from app.services import metrics
+                    metrics.incr("lystra_llm_retries_total")
+                except Exception:
+                    pass  # metrics are best-effort
                 await asyncio.sleep(delay)
 
         # Should be unreachable, but keep type-checker happy
@@ -99,11 +130,13 @@ class LLMClient:
         # Check cache first
         if settings.llm_cache_enabled:
             try:
-                from app.services import llm_cache
+                from app.services import llm_cache, metrics
                 cached = await llm_cache.get_cached(self.model, system_prompt, user_prompt)
                 if cached is not None:
                     logger.debug("LLM cache hit for model=%s", self.model)
+                    metrics.incr("lystra_llm_cache_hits_total", {"model": self.model})
                     return cached
+                metrics.incr("lystra_llm_cache_misses_total", {"model": self.model})
             except Exception as e:
                 logger.debug("LLM cache lookup failed (non-fatal): %s", e)
 
@@ -119,7 +152,9 @@ class LLMClient:
             )
             return response.choices[0].message.content or ""
 
-        result = await self._call_with_retry(_do)
+        sem = await _get_semaphore(self.base_url)
+        async with sem:
+            result = await self._call_with_retry(_do)
 
         # Store in cache (best-effort)
         if settings.llm_cache_enabled and result:
@@ -159,18 +194,22 @@ class LLMClient:
                 stream=True,
             )
 
-        response = await self._call_with_retry(_open_stream, stream=True)
-        full = []
-        try:
-            async for chunk in response:
-                delta = chunk.choices[0].delta.content
-                if delta:
-                    full.append(delta)
-                    yield delta
-        except Exception as err:
-            if _is_context_overflow(err):
-                raise ContextOverflowError(str(err)) from err
-            raise
+        # Hold the per-base_url semaphore for the entire stream duration so
+        # concurrent callers queue up instead of piling on the local LLM.
+        sem = await _get_semaphore(self.base_url)
+        full: list[str] = []
+        async with sem:
+            response = await self._call_with_retry(_open_stream, stream=True)
+            try:
+                async for chunk in response:
+                    delta = chunk.choices[0].delta.content
+                    if delta:
+                        full.append(delta)
+                        yield delta
+            except Exception as err:
+                if _is_context_overflow(err):
+                    raise ContextOverflowError(str(err)) from err
+                raise
 
         # Store full response in cache
         full_text = "".join(full)

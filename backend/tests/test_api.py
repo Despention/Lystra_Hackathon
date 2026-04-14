@@ -229,5 +229,33 @@ class TestExportEndpoint:
 
         response = await async_client.get(f"/api/export/{analysis_id}/pdf")
         assert response.status_code == 200
+        assert "application/pdf" in response.headers["content-type"]
+        # PDF magic bytes — anything else means the endpoint regressed to HTML
+        assert response.content.startswith(b"%PDF-")
+
+    async def test_export_html_endpoint_returns_html(self, async_client, test_db_engine):
+        from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+        from datetime import datetime, timezone
+
+        session_factory = async_sessionmaker(test_db_engine, class_=AsyncSession, expire_on_commit=False)
+        analysis_id = gen_uuid()
+
+        async with session_factory() as db:
+            analysis = Analysis(
+                id=analysis_id,
+                filename="export_test.txt",
+                file_type="txt",
+                status="completed",
+                total_score=70.0,
+                created_at=datetime.now(timezone.utc),
+                completed_at=datetime.now(timezone.utc),
+                document_text="Export test content",
+                mode="full",
+            )
+            db.add(analysis)
+            await db.commit()
+
+        response = await async_client.get(f"/api/export/{analysis_id}/html")
+        assert response.status_code == 200
         assert "text/html" in response.headers["content-type"]
         assert "TZ Analyzer" in response.text

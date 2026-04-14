@@ -14,6 +14,7 @@ from app.schemas import (
     AnalysisListItem,
     AnalysisResponse,
     CorrectionResponse,
+    FailedAgent,
     IssueResponse,
 )
 
@@ -87,6 +88,14 @@ async def get_analysis(analysis_id: str):
                     severity=c.severity,
                 )
                 for c in analysis.corrections
+            ],
+            failed_agents=[
+                FailedAgent(
+                    agent=ar.agent_name,
+                    error=(ar.error or "Agent reported failure"),
+                )
+                for ar in analysis.agent_results
+                if ar.status == "failed"
             ],
         )
 

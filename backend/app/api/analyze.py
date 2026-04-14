@@ -102,6 +102,7 @@ async def _run_analysis_task(analysis_id: str, document, mode: str):
                     started_at=datetime.now(timezone.utc),
                     completed_at=datetime.now(timezone.utc),
                     raw_output=ar.raw_output,
+                    error=ar.error,
                 )
                 db.add(db_ar)
 
@@ -171,11 +172,22 @@ async def _run_analysis_task(analysis_id: str, document, mode: str):
                 analysis.not_ready = "; ".join(not_ready_reasons)
             await db.commit()
 
+            try:
+                from app.services import metrics
+                metrics.incr("lystra_analyses_total", {"status": "completed"})
+            except Exception:
+                pass
+
         except Exception as e:
             logger.exception("Analysis %s failed: %s", analysis_id, e)
             analysis.status = "failed"
             await db.commit()
             await manager.broadcast_error(analysis_id, str(e))
+            try:
+                from app.services import metrics
+                metrics.incr("lystra_analyses_total", {"status": "failed"})
+            except Exception:
+                pass
 
 
 @router.post("/api/analyze", response_model=AnalyzeStartResponse)

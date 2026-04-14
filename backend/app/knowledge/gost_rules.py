@@ -97,6 +97,19 @@ AMBIGUOUS_PHRASES: list[tuple[str, str]] = [
 ]
 
 
+def _build_whitespace_tolerant_pattern(phrase: str) -> str:
+    """Build a regex that matches the phrase with any whitespace between words.
+
+    Splits on whitespace, escapes each word, joins with `\\s+`. Avoids the
+    re.sub template-string pitfall (Python 3.12+ rejects `\\s` in replacement
+    strings).
+    """
+    words = [re.escape(w) for w in phrase.split() if w]
+    if not words:
+        return ""
+    return r"\s+".join(words)
+
+
 def find_missing_sections(document_text: str) -> list[dict]:
     """Return a list of required GOST 34.602-89 sections missing from the document."""
     text_lower = document_text.lower()
@@ -107,9 +120,8 @@ def find_missing_sections(document_text: str) -> list[dict]:
         found = False
         candidates = (sec.title.lower(), *[s.lower() for s in sec.synonyms])
         for candidate in candidates:
-            # Normalize whitespace for matching
-            pattern = re.sub(r"\s+", r"\\s+", re.escape(candidate))
-            if re.search(pattern, text_lower):
+            pattern = _build_whitespace_tolerant_pattern(candidate)
+            if pattern and re.search(pattern, text_lower):
                 found = True
                 break
         if not found:

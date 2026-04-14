@@ -1,9 +1,46 @@
+import contextvars
+import logging
 import time
+import uuid
 from collections import defaultdict
 
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+
+
+# Request-scoped context var for log correlation. Every log record emitted
+# while a request is in-flight gets this ID automatically via RequestIDFilter.
+request_id_var: contextvars.ContextVar[str] = contextvars.ContextVar("request_id", default="-")
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    """Assign every request a correlation ID.
+
+    Reads X-Request-ID from the client if provided (useful for tying logs
+    to caller-side traces), otherwise generates a short UUID. The ID is
+    stored in a contextvar so logging filters pick it up, and echoed back
+    to the client in the X-Request-ID response header.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        incoming = request.headers.get("X-Request-ID")
+        rid = incoming if incoming else uuid.uuid4().hex[:12]
+        token = request_id_var.set(rid)
+        try:
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = rid
+            return response
+        finally:
+            request_id_var.reset(token)
+
+
+class RequestIDFilter(logging.Filter):
+    """Logging filter that injects the current request ID into every record."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = request_id_var.get()
+        return True
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):

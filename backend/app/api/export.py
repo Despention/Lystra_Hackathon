@@ -1,16 +1,25 @@
+import io
+import logging
+
+import openpyxl
 from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, Response, StreamingResponse
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 
-import io
-
-import openpyxl
-from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
-from openpyxl.utils import get_column_letter
-
 from app.database import Analysis, Issue, async_session
 from app.services.export_xlsx import export_history, export_single_analysis
+
+logger = logging.getLogger(__name__)
+
+try:
+    from xhtml2pdf import pisa
+    _PDF_AVAILABLE = True
+except ImportError:  # pragma: no cover
+    _PDF_AVAILABLE = False
+    logger.warning("xhtml2pdf not installed — PDF export will fall back to HTML")
 
 router = APIRouter()
 
@@ -27,9 +36,12 @@ REPORT_TEMPLATE = """\
   .score-box {{ background: {score_bg}; color: #fff; font-size: 48px; font-weight: bold; text-align: center; padding: 24px; border-radius: 12px; margin: 20px 0; }}
   .score-label {{ font-size: 14px; font-weight: normal; }}
   .not-ready {{ background: #FEE2E2; color: #EF4444; padding: 12px; border-radius: 8px; text-align: center; margin: 12px 0; font-weight: 600; }}
-  .category {{ display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #E5E7EB; }}
+  .category {{ width: 100%; padding: 8px 0; border-bottom: 1px solid #E5E7EB; }}
   .category-name {{ font-weight: 500; }}
-  .category-score {{ font-weight: 600; }}
+  .category-score {{ font-weight: 600; text-align: right; }}
+  .categories-table {{ width: 100%; border-collapse: collapse; }}
+  .categories-table td {{ padding: 8px 0; border-bottom: 1px solid #E5E7EB; }}
+  .categories-table .score-col {{ text-align: right; font-weight: 600; }}
   .issue {{ border-left: 4px solid {issue_color}; padding: 12px 16px; margin: 12px 0; background: #F9FAFB; border-radius: 0 8px 8px 0; }}
   .issue-title {{ font-weight: 600; margin-bottom: 4px; }}
   .severity {{ display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; color: #fff; }}
@@ -57,7 +69,9 @@ REPORT_TEMPLATE = """\
 {not_ready_html}
 
 <h2>Оценки по категориям</h2>
+<table class="categories-table">
 {categories_html}
+</table>
 
 <h2>Замечания ({issues_count})</h2>
 {issues_html}
@@ -220,8 +234,8 @@ async def export_expert_evaluation_xlsx(
     )
 
 
-@router.get("/api/export/{analysis_id}/pdf")
-async def export_report(analysis_id: str):
+async def _render_report_html(analysis_id: str) -> tuple[str, "Analysis"]:
+    """Load analysis and render the report template to HTML. Shared by /pdf and /html."""
     async with async_session() as db:
         result = await db.execute(
             select(Analysis)
@@ -239,13 +253,16 @@ async def export_report(analysis_id: str):
         if analysis.not_ready:
             not_ready_html = '<div class="not-ready">⚠ Документ не готов к утверждению</div>'
 
-        # Categories
+        # Categories — table rows (xhtml2pdf doesn't support flexbox)
         categories_html = ""
         for ar in analysis.agent_results:
             label = AGENT_LABELS.get(ar.agent_name, ar.agent_name)
             s = ar.score or 0
             color = "#10B981" if s >= 70 else "#F59E0B" if s >= 40 else "#EF4444"
-            categories_html += f'<div class="category"><span class="category-name">{label}</span><span class="category-score" style="color:{color}">{s:.0f}/100</span></div>\n'
+            categories_html += (
+                f'<tr><td class="category-name">{label}</td>'
+                f'<td class="score-col" style="color:{color}">{s:.0f}/100</td></tr>\n'
+            )
 
         # Issues
         issues_html = ""
@@ -281,7 +298,43 @@ async def export_report(analysis_id: str):
             issue_color="#E5E7EB",
         )
 
+        return html, analysis
+
+
+@router.get("/api/export/{analysis_id}/pdf")
+async def export_pdf(analysis_id: str):
+    """Render the analysis report as a real PDF file."""
+    html, analysis = await _render_report_html(analysis_id)
+
+    if not _PDF_AVAILABLE:
+        logger.warning("xhtml2pdf unavailable; returning HTML instead of PDF")
         return HTMLResponse(content=html)
+
+    buf = io.BytesIO()
+    pisa_status = pisa.CreatePDF(
+        src=html,
+        dest=buf,
+        encoding="utf-8",
+    )
+    if pisa_status.err:
+        logger.error("PDF generation failed for %s: %s", analysis_id, pisa_status.err)
+        raise HTTPException(status_code=500, detail="Не удалось сгенерировать PDF")
+
+    buf.seek(0)
+    safe_id = analysis_id[:8]
+    filename = f"analysis_{safe_id}.pdf"
+    return Response(
+        content=buf.getvalue(),
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get("/api/export/{analysis_id}/html")
+async def export_html(analysis_id: str):
+    """Return the analysis report as HTML (for in-browser preview / debugging)."""
+    html, _ = await _render_report_html(analysis_id)
+    return HTMLResponse(content=html)
 
 
 @router.get("/api/export/{analysis_id}/xlsx")

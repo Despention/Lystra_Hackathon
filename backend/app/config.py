@@ -25,6 +25,9 @@ class Settings(BaseSettings):
     llm_retry_backoff: float = 1.0  # base delay in seconds for exponential backoff
     llm_timeout_seconds: int = 120
     llm_max_context_chars: int = 12000  # larger for cloud models
+    # Max concurrent in-flight requests per base_url. Local llama.cpp serves one
+    # at a time, so default 1 — hosted APIs can raise this via env.
+    llm_max_concurrent: int = 1
 
     # LLM cache
     llm_cache_enabled: bool = True

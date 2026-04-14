@@ -69,6 +69,9 @@ class AgentResult(Base):
     started_at = Column(DateTime, nullable=True)
     completed_at = Column(DateTime, nullable=True)
     raw_output = Column(Text, nullable=True)
+    # Populated when the agent errored — surfaced in AnalysisResponse.failed_agents
+    # so the UI can show why specifically an agent failed instead of a silent 0.
+    error = Column(Text, nullable=True)
 
     analysis = relationship("Analysis", back_populates="agent_results")
 
@@ -120,8 +123,60 @@ class LLMCache(Base):
 
 
 async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Bring the schema to the latest version.
+
+    Uses Alembic when available so schema changes deploy deterministically.
+    If alembic isn't installed or the project's alembic dir is missing, falls
+    back to `Base.metadata.create_all()` — the legacy dev behavior, useful
+    for hackathon-style fresh installs.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+
+    try:
+        from pathlib import Path
+
+        from alembic import command
+        from alembic.config import Config
+        from sqlalchemy import inspect
+
+        # Locate alembic.ini relative to the backend package root.
+        backend_root = Path(__file__).resolve().parent.parent
+        ini_path = backend_root / "alembic.ini"
+        if not ini_path.exists():
+            raise FileNotFoundError("alembic.ini not found — using create_all fallback")
+
+        def _run():
+            cfg = Config(str(ini_path))
+            # Force alembic to use our resolved URL (important when ALEMBIC_DATABASE_URL is unset)
+            cfg.set_main_option("sqlalchemy.url", settings.database_url)
+
+            # If a pre-Alembic DB exists (tables present but no alembic_version),
+            # stamp it to baseline so `upgrade head` is a no-op instead of failing.
+            import sqlalchemy as sa
+            sync_url = settings.database_url.replace("+aiosqlite", "")
+            sync_engine = sa.create_engine(sync_url)
+            with sync_engine.connect() as conn:
+                inspector = inspect(conn)
+                tables = set(inspector.get_table_names())
+                has_app_tables = "analyses" in tables
+                has_version = "alembic_version" in tables
+            sync_engine.dispose()
+
+            if has_app_tables and not has_version:
+                logger.info("Pre-Alembic DB detected — stamping baseline")
+                command.stamp(cfg, "head")
+            else:
+                command.upgrade(cfg, "head")
+
+        # Alembic's API is sync; run in a thread so we don't block the event loop.
+        import asyncio
+        await asyncio.to_thread(_run)
+        logger.info("Database schema is at head")
+    except Exception as e:
+        logger.warning("Alembic migration failed (%s) — falling back to create_all", e)
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
 
 
 async def get_db():

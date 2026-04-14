@@ -101,6 +101,19 @@ async def run_single_agent(
     completed = datetime.now(timezone.utc)
     duration_ms = int((completed - started).total_seconds() * 1000)
 
+    # Metrics — best-effort; never fail the analysis because of metric recording
+    try:
+        from app.services import metrics
+        metrics.observe(
+            "lystra_agent_duration_seconds",
+            duration_ms / 1000.0,
+            {"agent": agent.name},
+        )
+        if result.error:
+            metrics.incr("lystra_agent_errors_total", {"agent": agent.name})
+    except Exception:
+        pass
+
     if on_event:
         if result.error:
             # Send a dedicated agent_error event

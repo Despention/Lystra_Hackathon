@@ -42,6 +42,14 @@ class CorrectionResponse(BaseModel):
     severity: str
 
 
+class FailedAgent(BaseModel):
+    """One agent that failed during analysis — surfaced so the UI can
+    show an honest partial-failure state instead of silently pretending
+    nothing went wrong."""
+    agent: str
+    error: str
+
+
 class AnalysisResponse(BaseModel):
     id: str
     filename: str | None
@@ -58,6 +66,15 @@ class AnalysisResponse(BaseModel):
     agent_results: list[AgentResultResponse]
     issues: list[IssueResponse]
     corrections: list[CorrectionResponse] = []
+    failed_agents: list[FailedAgent] = []
+
+
+class ErrorResponse(BaseModel):
+    """Structured error envelope. Used by the global exception handler so
+    clients get a consistent shape regardless of which layer raised."""
+    code: str
+    message: str
+    detail: dict | None = None
 
 
 class AnalysisListItem(BaseModel):
